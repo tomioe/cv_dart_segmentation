@@ -1,0 +1,11 @@
+contours = {
+	"1k14988jah3llpzmms2": {
+		"contour": single_contour
+		"mid": (x, y),
+		'source': [bw / gr],
+		"confirmed": false (default)
+		"position": inner/outer/single/bull
+		
+		"distance": xxx
+	}
+}
