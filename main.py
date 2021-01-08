@@ -3,7 +3,7 @@ import cv2
 from scipy.spatial import distance as dist
 from collections import Counter
 
-import pylab
+# import pylab
 
 colors = {
     # darkest is lower
@@ -33,7 +33,8 @@ colors = {
 # used to keep track of the contours to return
 return_contours = []
 
-input_image = cv2.imread('../test1.jpg')
+#input_image = cv2.imread('../test1.jpg')
+input_image = cv2.imread('./images/test2.jpg')
 input_image_hsv = cv2.cvtColor(input_image, cv2.COLOR_BGR2HSV)
 
 '''
@@ -60,14 +61,17 @@ for color in colors:
         # step 3
         converted_mask = cv2.cvtColor( input_color_mask, cv2.COLOR_BGR2GRAY )
         
+        
         #step 4
-        _, cont, _  = cv2.findContours( converted_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        cont, _  = cv2.findContours( converted_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        #_, cont, _  = cv2.findContours( converted_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         colors[color]['contours'] = cont
 
     except KeyError:
         # Key is not present
         print('no lower/upper values for %s' % color)
-        pass
+        # pass
+        return 
     
 contour_count = 0
 for color in colors:
@@ -248,26 +252,6 @@ for s_index in range(0,len(s)-1):
     
 s = [sc for sc in s if sc['confirmed']==True]
 
-#now loop through s one last time to determine if single/inner/outer
-
-return_contours = [rc for rc in return_contours if rc['position']=='bull']
-return_contours.extend(s)
-
-cv2.destroyAllWindows()
-cv2.namedWindow('board',cv2.WINDOW_NORMAL)
-cv2.resizeWindow('board', (750,750))
-i = 0
-for rc in return_contours:
-    if not rc['position'] == 'bull':
-        cv2.putText(input_image, str(rc['distance']), (rc['mid'][0]-8 , rc['mid'][1]-8),cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0),2,cv2.LINE_AA )
-        
-    # cv2.putText(input_image, str(rc['position']), (rc['mid'][0]-15 , rc['mid'][1]-15),cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0),2,cv2.LINE_AA )
-    cv2.drawContours(input_image, [rc['contour']], -1, (153, 255, 255), 3)
-    cv2.imshow('board', input_image)
-    i = i + 1
-    if i == len(return_contours):
-        cv2.waitKey(0)
-
 # TODO: determine cell type (single/inner/outer)
 # HINT: we know distance to bull 
 # dummy method:
@@ -292,7 +276,30 @@ for rc in return_contours:
 #   *   track each distance, and find min dist (== neighbor)
 #   *   [find system/structure of how contours link up]
 
+
+
+return_contours = [rc for rc in return_contours if rc['position']=='bull']
+return_contours.extend(s)
+
+
+cv2.destroyAllWindows()
+cv2.namedWindow('board',cv2.WINDOW_NORMAL)
+cv2.resizeWindow('board', (750,750))
+i = 0
+for rc in return_contours:
+    if not rc['position'] == 'bull':
+        cv2.putText(input_image, str(rc['distance']), (rc['mid'][0]-8 , rc['mid'][1]-8),cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0),2,cv2.LINE_AA )
+        
+    # cv2.putText(input_image, str(rc['position']), (rc['mid'][0]-15 , rc['mid'][1]-15),cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0),2,cv2.LINE_AA )
+    cv2.drawContours(input_image, [rc['contour']], -1, (153, 255, 255), 3)
+    cv2.imshow('board', input_image)
+    i = i + 1
+    if i == len(return_contours):
+        cv2.waitKey(0)
+
 print('got %d confirmed cells!' % len(return_contours))
 print("done")
 
 # return triple_contours, double_contours, single_contours, bull_contours
+# or just
+# return confirmed_contours     # all contours are marked with their score 
