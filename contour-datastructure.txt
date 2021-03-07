@@ -1,11 +1,18 @@
-contours = {
-	"a0c42c": {				# name is md5(contour + mid + distance).substring(0,5)
-		"contour": single_contour
-		"mid": (x, y),
+contours = [
+	{				
+		'contour': single_contour
+		'mid': (x, y),
 		'source': [bw / gr],
-		"confirmed": false (default)
-		"position": inner/outer/single/bull
+		'confirmed': false (default)
+		'position': inner/outer/single/bull
 		
-		"distance": xxx		# distance from middle of cell to bulls eye
+		'distance': xxx		# distance from middle of cell to bulls eye
+		'id': 				# name is md5(contour + mid + distance).substring(0,5)
+		'link': 			# list of linked cells
+			[
+				id1
+				(id2)
+			]
 	}
-}
+	
+]

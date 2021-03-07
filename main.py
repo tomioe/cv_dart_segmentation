@@ -42,6 +42,8 @@ def draw_results( input_img, ret_conts ):
     for rc in ret_conts:
         if not rc['position'] == 'bull':
           cv2.putText(input_img, str(rc['position']), (rc['mid'][0]-8 , rc['mid'][1]-8),cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,0,0),2,cv2.LINE_AA )
+        #   if rc['link']:
+        #       conti
         # cv2.putText(input_image, '*', (rc['mid'][0]-8 , rc['mid'][1]-8),cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0),2,cv2.LINE_AA )
         
         # cv2.putText(input_image, str(rc['position']), (rc['mid'][0]-15 , rc['mid'][1]-15),cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0),2,cv2.LINE_AA )
@@ -271,21 +273,17 @@ def assign_cell_type( input_cell_contours ):
         # if we're at the last contour, we know that the type is the last 'position'
         if conf_con_index == len(input_cell_contours)-1:
             input_cell_contours[conf_con_index]['position'] = score_cell_positions[len(score_cell_positions)-1]
-            break
+        else:
+            # assign the current 'position' 
+            input_cell_contours[conf_con_index]['position'] = score_cell_positions[cont_type_index]
+            # take the current and next contour's distances and diff them
+            cont_dist_curr = input_cell_contours[conf_con_index]['distance']
+            cont_dist_next = input_cell_contours[conf_con_index+1]['distance']
+            # if we're more than 20 from the next contour, we must be advancing to next 'position'
+            if cont_dist_next - cont_dist_curr > 20:
+                print(f'advancing type index, diff is {cont_dist_next - cont_dist_curr}')
+                cont_type_index += 1
             
-        # otherwise, we simply take the current and next contour's distances and diff them
-        cont_dist_curr = input_cell_contours[conf_con_index]['distance']
-        cont_dist_next = input_cell_contours[conf_con_index+1]['distance']
-        # if we're more than 20 from the next contour, we must be advancing to next 'position'
-        if cont_dist_next - cont_dist_curr > 20:
-            print(f'advancing type index, diff is {cont_dist_next - cont_dist_curr}')
-            cont_type_index += 1
-            
-        
-        # and finally assign the current 'position' 
-        input_cell_contours[conf_con_index]['position'] = score_cell_positions[cont_type_index]
-        
-
     return input_cell_contours
 
 # in order to pair them up later, we need to assign unique but determinable ID's to each contour
@@ -295,7 +293,7 @@ def generate_cont_id(contour_data, contour_distance, contour_position):
 
 def assign_cell_id( input_cell_contours ):
     # we keep track of the assigned id's 
-    assigned_ids = {}
+    assigned_ids = []
     for icc in input_cell_contours:
         uniq_id = generate_cont_id(
             icc['contour'],
@@ -303,27 +301,59 @@ def assign_cell_id( input_cell_contours ):
             icc['position']
         )
 
-    # if we ever get an already assigned id, just generate a new one from the current (but unassigned) id
-    if uniq_id in assigned_ids:
-        print('!!!Duplicate ID!!!')
-        uniq_id = hashlib.md5(uniq_id.encode()).hexdigest()
+        # if we ever get an already assigned id, just generate a new one from the current (but unassigned) id
+        if uniq_id in assigned_ids:
+            print('!!!Duplicate ID!!!')
+            uniq_id = hashlib.md5(uniq_id.encode()).hexdigest()
 
-    icc['id'] = uniq_id
-    assigned_ids[uniq_id] = uniq_id
+        icc['id'] = uniq_id
+        assigned_ids.append(uniq_id)
 
     return input_cell_contours
 
 def determine_linked_cells ( input_cell_contours ):
     for pos in score_cell_positions:
+        # create an array with only a specific position [i.e. only 'single-inner']
         curr_pos = [contours for contours in input_cell_contours if contours['position']==pos]
         print(f'looping {pos} , L = {len(curr_pos)}')
+        for score_cell in curr_pos:
+            sc_id = score_cell['id']
+            id_dist_list = []
+            for score_cell_neighbor in curr_pos:
+                sc_id_other = score_cell_neighbor['id']
+                if sc_id == sc_id_other:
+                    continue
+                sc_mid = score_cell['mid']
+                sc_mid_other = score_cell_neighbor['mid']
+                distance_between_mid = int(dist.euclidean( sc_mid , sc_mid_other))
+                id_dist_list.append({
+                    'sc_id_other': sc_id_other,
+                    'distance': distance_between_mid
+                })
+            if(len(id_dist_list) != len(curr_pos)-1):
+                print("Serious length/id match error!")
+            # Now sort these contours based on their distance
+            id_dist_list.sort(key=operator.itemgetter('distance'))
+            neighbor1, neighbor2 = id_dist_list[0]['sc_id_other'], id_dist_list[1]['sc_id_other']
+            score_cell['link'] = [
+                neighbor1,
+                neighbor2
+            ]
+            '''
+            to save time, we could already link the neighbors as well...
+
+                input_cell_contours[neighbor1]['link'] = [ sc_id , neighbor2 ]
+                input_cell_contours[neighbor2]['link'] = [ sc_id , neighbor1 ]
+
+            butt fk that , it's difficult since we dont have an easy way to index the contours.
+            should really dict the inp_cont's , but how do we link them back...?
+            '''
 
 
     return input_cell_contours
 
 def main( image_path ):
     return_contours = []
-    #input_image = cv2.imread('../test1.jpg')
     input_image = cv2.imread('./images/test2.jpg')
 
     # extract contours under each different color
