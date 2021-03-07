@@ -34,16 +34,26 @@ colors = {
 score_cell_positions = ['single_inner', 'triple', 'single_outer', 'double']
 
 
-def draw_results( input_img, ret_conts ):
+def draw_results(input_img, ret_conts):
+    # helper arrays for drawing the line between neighboring cells
+    score_cell_contours = [rc for rc in ret_conts if not rc['position']=='bull']
+    ids = [icc['id'] for icc in score_cell_contours]
+    cell_contour_dict = dict(zip(ids, score_cell_contours))
+
     cv2.destroyAllWindows()
-    cv2.namedWindow('board',cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('board', (750,750))
+    cv2.namedWindow('board', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('board', (750, 750))
     i = 0
     for rc in ret_conts:
-        if not rc['position'] == 'bull':
-          cv2.putText(input_img, str(rc['position']), (rc['mid'][0]-8 , rc['mid'][1]-8),cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,0,0),2,cv2.LINE_AA )
-        #   if rc['link']:
-        #       conti
+        if rc['position'] != 'bull':
+            cv2.putText(input_img, str(rc['distance']), (rc['mid'][0]-8, rc['mid'][1]-8), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 2, cv2.LINE_AA)
+
+        if 'link' in rc:
+            neighbor0, neighbor1 = rc['link'][0], rc['link'][1]
+            neighbor0_mid = cell_contour_dict[neighbor0]['mid']
+            neighbor1_mid = cell_contour_dict[neighbor1]['mid']
+            cv2.line(input_img, rc['mid'], neighbor0_mid, (0,0,255), 2)
+            cv2.line(input_img, rc['mid'], neighbor1_mid, (0,0,255), 2)
         # cv2.putText(input_image, '*', (rc['mid'][0]-8 , rc['mid'][1]-8),cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0),2,cv2.LINE_AA )
         
         # cv2.putText(input_image, str(rc['position']), (rc['mid'][0]-15 , rc['mid'][1]-15),cv2.FONT_HERSHEY_SIMPLEX, 1, (255,0,0),2,cv2.LINE_AA )
@@ -316,6 +326,8 @@ def determine_linked_cells ( input_cell_contours ):
         # create an array with only a specific position [i.e. only 'single-inner']
         curr_pos = [contours for contours in input_cell_contours if contours['position']==pos]
         print(f'looping {pos} , L = {len(curr_pos)}')
+        ids = [icc['id'] for icc in input_cell_contours]
+        cell_contour_dict = dict(zip(ids, input_cell_contours))
         for score_cell in curr_pos:
             sc_id = score_cell['id']
             id_dist_list = []
@@ -332,6 +344,7 @@ def determine_linked_cells ( input_cell_contours ):
                 })
             if(len(id_dist_list) != len(curr_pos)-1):
                 print("Serious length/id match error!")
+
             # Now sort these contours based on their distance
             id_dist_list.sort(key=operator.itemgetter('distance'))
             neighbor1, neighbor2 = id_dist_list[0]['sc_id_other'], id_dist_list[1]['sc_id_other']
@@ -339,15 +352,6 @@ def determine_linked_cells ( input_cell_contours ):
                 neighbor1,
                 neighbor2
             ]
-            '''
-            to save time, we could already link the neighbors as well...
-
-                input_cell_contours[neighbor1]['link'] = [ sc_id , neighbor2 ]
-                input_cell_contours[neighbor2]['link'] = [ sc_id , neighbor1 ]
-
-            butt fk that , it's difficult since we dont have an easy way to index the contours.
-            should really dict the inp_cont's , but how do we link them back...?
-            '''
 
 
     return input_cell_contours
